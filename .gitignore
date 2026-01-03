@@ -1,0 +1,23 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+venv/
+
+# Audio files (Privacy & Space)
+*.wav
+*.mp3
+*.m4a
+
+# Models (Too big for Git)
+engine/models/*.bin
+engine/whisper.cpp/
+
+# Output
+output/transcripts/*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
