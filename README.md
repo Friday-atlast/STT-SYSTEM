@@ -14,3 +14,8 @@ Powered by Whisper.cpp and Python.
 1. Create venv: `python -m venv venv`
 2. Activate venv.
 3. Install reqs: `pip install -r requirements.txt`
+
+## Day 1: Engine Setup
+- Whisper.cpp cloned in `engine/`
+- Tiny model downloaded.
+- Build successful on CPU.

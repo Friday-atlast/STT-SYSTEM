@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 venv/
+.vs/
 
 # Audio files (Privacy & Space)
 *.wav
