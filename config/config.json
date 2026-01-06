@@ -1,0 +1,6 @@
+{
+    "model_type": "base",
+    "language": "en",
+    "mic_duration": 8,
+    "threads": 4
+}

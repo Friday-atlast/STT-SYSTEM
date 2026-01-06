@@ -5,6 +5,18 @@ import shutil # File move karne ke liye
 import json
 import time
 
+# Model Mapping Logic
+MODEL_MAP = {
+    "tiny": "ggml-tiny.bin",
+    "base": "ggml-base.bin",
+    "small": "ggml-small.bin"
+}
+
+def get_model_path(model_type):
+    """Model type (tiny/base) se file path nikalta hai"""
+    filename = MODEL_MAP.get(model_type, "ggml-tiny.bin") # Default to tiny
+    return os.path.join(BASE_DIR, "engine", "models", filename)
+
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -13,19 +25,22 @@ if os.name == 'nt':
 else:
     WHISPER_PATH = os.path.join(BASE_DIR, "engine", "whisper.cpp", "build", "bin", "whisper-cli")
 
-MODEL_PATH = os.path.join(BASE_DIR, "engine", "models", "ggml-tiny.bin")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output", "transcripts")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def transcribe_audio(audio_path, language="auto"):
+def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
     """
     Transcribes audio and generates .txt and .json files.
     """
     if not os.path.exists(WHISPER_PATH):
         print(f"❌ Error: Binary missing")
         return
-    if not os.path.exists(MODEL_PATH):
-        print(f"❌ Error: Model missing")
+    
+    # Dynamic Model Path
+    current_model_path = get_model_path(model_type)
+    
+    if not os.path.exists(current_model_path):
+        print(f"❌ Error: Model missing: {current_model_path}")
         return
 
     # File name without extension (e.g. "temp_recording")
@@ -42,14 +57,14 @@ def transcribe_audio(audio_path, language="auto"):
 
     command = [
         WHISPER_PATH,
-        "-m", MODEL_PATH,
+        "-m", current_model_path, # <--- Use Dynamic Path
         "-f", audio_path,
         "-l", language,
-        "-t", "4",         # 4 Threads for speed
+        "-t", str(threads),       # <--- Use Configured Threads
         "--no-gpu",
-        "-otxt",           # Output Text file
-        "-oj",             # Output JSON file
-        "-of", os.path.join(OUTPUT_DIR, unique_name) # Output Filename prefix
+        "-otxt",
+        "-oj",
+        "-of", os.path.join(OUTPUT_DIR, unique_name)
     ]
 
     try:

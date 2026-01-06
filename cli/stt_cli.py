@@ -3,82 +3,74 @@ import os
 import sys
 import time
 
-# --- IMPORT HACK (Taaki root folder ke modules milein) ---
-# Hum system ko batate hain ki "ek folder upar (..)" bhi dekho
+# Path Setup
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
-# Ab hum apne modules import kar sakte hain
 from audio.mic import record_audio
 from stt.offline import transcribe_audio
+from config.loader import load_config  # <--- Import Loader
 
-def handle_mic(language):
-    """Mic se sunta hai aur process karta hai"""
-    print("\n🎤 Mode: Live Microphone Input")
+def handle_mic(config, cli_lang=None):
+    # Priority: CLI arg > Config > Default
+    lang = cli_lang if cli_lang else config['language']
+    duration = config['mic_duration']
+    model = config['model_type']
+    threads = config['threads']
+
+    print(f"\n🎤 Mode: Live Mic | Model: {model} | Lang: {lang} | Threads: {threads}")
+    print(f"⏱️  Recording Duration: {duration}s (Change in config.json)")
     
-    # Temp file setup
     temp_file = os.path.join(parent_dir, "temp_cli_recording.wav")
     
-    # 1. Record
-    start_time = time.time()
-    success = record_audio(temp_file, duration=5) # Abhi 5s fixed hai
+    # Pass duration from config
+    success = record_audio(temp_file, duration=duration)
     
     if not success:
         print("❌ Recording failed.")
         return
 
-    # 2. Transcribe
     print(f"\n🧠 Processing...")
-    transcribe_audio(temp_file, language=language)
+    transcribe_audio(temp_file, language=lang, model_type=model, threads=threads)
     
-    # 3. Cleanup
     if os.path.exists(temp_file):
         os.remove(temp_file)
-        print("🧹 Cleanup: Temp file removed.")
-        
-    end_time = time.time()
-    print(f"⏱️  Total Time: {end_time - start_time:.2f}s")
 
-def handle_file(file_path, language):
-    """Existing file ko process karta hai"""
-    print(f"\n📁 Mode: File Input")
+def handle_file(file_path, config, cli_lang=None):
+    lang = cli_lang if cli_lang else config['language']
+    model = config['model_type']
+    threads = config['threads']
     
-    # Absolute path banao taaki galti na ho
+    print(f"\n📁 Mode: File | Model: {model} | Lang: {lang}")
+    
     abs_path = os.path.abspath(file_path)
-    
     if not os.path.exists(abs_path):
-        print(f"❌ Error: File nahi mili -> {abs_path}")
+        print(f"❌ Error: File not found -> {abs_path}")
         return
 
-    print(f"📄 File: {os.path.basename(abs_path)}")
-    transcribe_audio(abs_path, language=language)
+    transcribe_audio(abs_path, language=lang, model_type=model, threads=threads)
 
 def main():
-    # --- CLI SETUP ---
-    parser = argparse.ArgumentParser(
-        description="Offline Speech-to-Text Tool (v1.0)",
-        epilog="Examples:\n  python cli/stt_cli.py --mic\n  python cli/stt_cli.py --file audio.wav --lang hi",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+    # 1. Load Config
+    config = load_config()
 
-    # Arguments define karo
+    parser = argparse.ArgumentParser(description="STT CLI Tool (v1.1)")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--mic", action="store_true", help="Record from microphone (5 seconds)")
-    group.add_argument("--file", type=str, help="Transcribe an existing audio file")
+    group.add_argument("--mic", action="store_true", help="Record from microphone")
+    group.add_argument("--file", type=str, help="Transcribe file")
+    
+    # Default help mein dikhayenge ki config se kya utha raha hai
+    parser.add_argument("--lang", type=str, help=f"Language code (Current Config: {config['language']})")
 
-    parser.add_argument("--lang", type=str, default="auto", help="Language code (e.g., 'en', 'hi'). Default: auto")
-
-    # Arguments parse karo
     args = parser.parse_args()
 
     print("=== STT CLI Tool ===")
 
-    # Logic route karo
     if args.mic:
-        handle_mic(args.lang)
+        handle_mic(config, args.lang)
     elif args.file:
-        handle_file(args.file, args.lang)
+        handle_file(args.file, config, args.lang)
 
 if __name__ == "__main__":
     main()
