@@ -1,8 +1,11 @@
 import os
 import subprocess
 import sys
+import shutil # File move karne ke liye
+import json
+import time
 
-# --- CONFIGURATION (Paths Setup) ---
+# --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 if os.name == 'nt':
@@ -14,70 +17,69 @@ MODEL_PATH = os.path.join(BASE_DIR, "engine", "models", "ggml-tiny.bin")
 OUTPUT_DIR = os.path.join(BASE_DIR, "output", "transcripts")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Function ab 'language' parameter bhi leta hai (default 'auto')
 def transcribe_audio(audio_path, language="auto"):
     """
-    C++ Engine ko call karta hai.
-    language: 'en', 'hi', or 'auto'
+    Transcribes audio and generates .txt and .json files.
     """
-    
     if not os.path.exists(WHISPER_PATH):
-        print(f"❌ Error: Binary missing: {WHISPER_PATH}")
+        print(f"❌ Error: Binary missing")
         return
     if not os.path.exists(MODEL_PATH):
-        print(f"❌ Error: Model missing: {MODEL_PATH}")
-        return
-    if not os.path.exists(audio_path):
-        print(f"❌ Error: Audio missing: {audio_path}")
+        print(f"❌ Error: Model missing")
         return
 
-    print(f"🎤 Processing: {audio_path}")
-    print(f"🌐 Language: {language}")
+    # File name without extension (e.g. "temp_recording")
+    base_name = os.path.splitext(os.path.basename(audio_path))[0]
+    
+    # Hum unique filename banayenge timestamp ke saath taaki purana overwrite na ho
+    timestamp = int(time.time())
+    unique_name = f"{base_name}_{timestamp}"
+    
+    # Whisper output file wahin banata hai jahan audio file hoti hai
+    # Isliye hum output path logic baad mein handle karenge
+    
+    print(f"🎤 Processing: {base_name}")
 
-    # Command Construction
     command = [
         WHISPER_PATH,
         "-m", MODEL_PATH,
         "-f", audio_path,
-        "-l", language,    # <--- Language Flag Added
-        "--no-gpu"
+        "-l", language,
+        "-t", "4",         # 4 Threads for speed
+        "--no-gpu",
+        "-otxt",           # Output Text file
+        "-oj",             # Output JSON file
+        "-of", os.path.join(OUTPUT_DIR, unique_name) # Output Filename prefix
     ]
 
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        raw_text = result.stdout
+        # Run Whisper
+        subprocess.run(command, capture_output=True, text=True, check=True)
         
-        filename = os.path.basename(audio_path) + ".txt"
-        save_path = os.path.join(OUTPUT_DIR, filename)
+        # Paths define karo
+        txt_path = os.path.join(OUTPUT_DIR, f"{unique_name}.txt")
+        json_path = os.path.join(OUTPUT_DIR, f"{unique_name}.json")
         
-        with open(save_path, "w", encoding="utf-8") as f:
-            f.write(raw_text)
+        print(f"✅ Text Saved: {txt_path}")
+        print(f"✅ JSON Saved: {json_path}")
 
-        print(f"✅ Saved to: {save_path}")
-        print("\n--- Preview ---")
-        # Preview mein non-ascii characters (Hindi) print karne ke liye terminal support chahiye hota hai
-        try:
-            print(raw_text[:200] + "...")
-        except UnicodeEncodeError:
-            print("(Preview hidden due to terminal font issues, check file)")
-        print("---------------\n")
+        # Preview Text
+        if os.path.exists(txt_path):
+            with open(txt_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                print("\n--- Preview ---")
+                print(content[:200] + "..." if len(content) > 200 else content)
+                print("---------------\n")
 
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Failed! Code: {e.returncode}")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
 
+# --- TEST ---
 if __name__ == "__main__":
-    # Test Logic
     if len(sys.argv) > 1:
-        audio_file = sys.argv[1]
-        
-        # User language bhi bata sakta hai argument mein
-        # Usage: python offline.py audio.wav hi
-        lang = "auto"
-        if len(sys.argv) > 2:
-            lang = sys.argv[2]
-            
-        transcribe_audio(audio_file, lang)
+        transcribe_audio(sys.argv[1])
     else:
-        # Default test
         test_audio = os.path.join(BASE_DIR, "engine", "whisper.cpp", "samples", "jfk.wav")
-        transcribe_audio(test_audio, "en")
+        transcribe_audio(test_audio)
