@@ -106,10 +106,15 @@ def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
                 print(content[:200] + "..." if len(content) > 200 else content)
                 print("---------------\n")
 
+        # Return the path to the saved transcript on success
+        return txt_path
+
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Failed! Code: {e.returncode}")
+        return None
     except Exception as e:
         print(f"\n❌ Error: {e}")
+        return None
 
 # --- TEST ---
 if __name__ == "__main__":
