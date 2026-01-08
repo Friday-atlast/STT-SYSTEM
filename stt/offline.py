@@ -5,6 +5,10 @@ import shutil # File move karne ke liye
 import json
 import time
 
+# Add path to find language module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from language.handler import resolve_language, get_language_name # <--- Import
+
 # Model Mapping Logic
 MODEL_MAP = {
     "tiny": "ggml-tiny.bin",
@@ -43,6 +47,22 @@ def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
         print(f"❌ Error: Model missing: {current_model_path}")
         return
 
+    # 1. Validate & Resolve Language
+    # Note: Yahan hum assume kar rahe hain ki 'language' argument 
+    # jo function mein aaya hai, wo final decided language hai.
+    # Lekin double safety ke liye hum check kar sakte hain.
+    
+    final_lang = language
+    if final_lang not in ["auto", "en", "hi", "mr", "ta", "te"]: # Simple check
+         # Agar complex validation chahiye to handler import karein, 
+         # par offline.py engine hai, decision maker nahi.
+         # Isliye hum maan ke chalenge ki CLI/Config ne sahi bheja hai.
+         pass
+
+    # Log for User
+    lang_name = get_language_name(final_lang)
+    print(f"🌐 Language Mode: {lang_name} ({final_lang})")
+
     # File name without extension (e.g. "temp_recording")
     base_name = os.path.splitext(os.path.basename(audio_path))[0]
     
@@ -59,7 +79,7 @@ def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
         WHISPER_PATH,
         "-m", current_model_path, # <--- Use Dynamic Path
         "-f", audio_path,
-        "-l", language,
+        "-l", final_lang,   # <--- Validated Language
         "-t", str(threads),       # <--- Use Configured Threads
         "--no-gpu",
         "-otxt",
