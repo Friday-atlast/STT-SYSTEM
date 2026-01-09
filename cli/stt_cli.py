@@ -59,7 +59,7 @@ def main():
     # --- CLI SETUP (UPDATED HELP) ---
     parser = argparse.ArgumentParser(
         description="""
-🎙️  Offline Speech-to-Text Tool (v1.2)
+🎙️  Offline Speech-to-Text Tool (v1.0)
 -------------------------------------
 A privacy-focused, offline STT engine powered by Whisper.cpp.
 Optimized for low-end devices (CPU Only).

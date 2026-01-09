@@ -1,6 +1,7 @@
 {
-    "model_type": "base",
-    "language": "en",
-    "mic_duration": 8,
-    "threads": 4
+    "model_type": "tiny",
+    "language": "auto",
+    "mic_duration": 5,
+    "threads": 2,
+    "ram_mode": "low"
 }

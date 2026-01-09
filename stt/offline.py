@@ -3,6 +3,7 @@ import subprocess
 import sys
 import shutil # File move karne ke liye
 import json
+import multiprocessing
 import time
 
 # Add path to find language module
@@ -20,6 +21,29 @@ def get_model_path(model_type):
     """Model type (tiny/base) se file path nikalta hai"""
     filename = MODEL_MAP.get(model_type, "ggml-tiny.bin") # Default to tiny
     return os.path.join(BASE_DIR, "engine", "models", filename)
+
+
+def get_optimal_threads(config_threads):
+    """
+    CPU cores check karta hai aur safe limit set karta hai.
+    """
+    total_cores = multiprocessing.cpu_count()
+    
+    # User ne jo maanga hai
+    requested = int(config_threads)
+    
+    # Safe limit: Total cores ka 50% - 75% hi use karo
+    # Taaki baaki system hang na ho
+    safe_limit = max(1, int(total_cores * 0.75))
+    
+    # Agar user ne zyada maanga hai, toh safe limit pe le aao
+    final_threads = min(requested, safe_limit)
+    
+    # Low-end devices (2 cores) ke liye always 2 ya 1 rakho
+    if total_cores <= 2:
+        final_threads = max(1, total_cores - 1) # 1 thread chhod do OS ke liye
+        
+    return str(final_threads)
 
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -73,6 +97,10 @@ def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
     # Whisper output file wahin banata hai jahan audio file hoti hai
     # Isliye hum output path logic baad mein handle karenge
     
+    # Calculate Smart Threads
+    smart_threads = get_optimal_threads(threads)
+    print(f"⚙️  Optimized Threads: {smart_threads} (Requested: {threads})")
+
     print(f"🎤 Processing: {base_name}")
 
     command = [
@@ -80,7 +108,7 @@ def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
         "-m", current_model_path, # <--- Use Dynamic Path
         "-f", audio_path,
         "-l", final_lang,   # <--- Validated Language
-        "-t", str(threads),       # <--- Use Configured Threads
+        "-t", smart_threads,       # <--- Use Optimized Threads
         "--no-gpu",
         "-otxt",
         "-oj",
