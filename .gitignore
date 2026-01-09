@@ -16,6 +16,11 @@ engine/whisper.cpp/
 # Output
 output/transcripts/*
 
+# Temporary uploads and build artifacts
+temp_uploads/
+engine/build/
+engine/whisper.cpp/build/
+
 # OS generated files
 .DS_Store
 Thumbs.db

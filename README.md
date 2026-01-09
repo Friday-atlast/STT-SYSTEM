@@ -2,6 +2,10 @@
 
 Simple, local speech-to-text for everyone — programmers and non-programmers.
 
+Version: v1.0.0 — Final packaging (see RELEASE_NOTES_v1.0.0.md)
+
+Release notes and roadmap are in the repo root: `RELEASE_NOTES_v1.0.0.md`, `ROADMAP.md`.
+
 This repository contains an offline Speech-to-Text (STT) system built around whisper.cpp with a small Python orchestration layer. The goal: let a first-time user get a working transcription without confusion or guessing.
 
 -----

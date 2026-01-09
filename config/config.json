@@ -3,5 +3,6 @@
     "language": "auto",
     "mic_duration": 5,
     "threads": 2,
-    "ram_mode": "low"
+    "ram_mode": "low",
+    "version": "v1.0.0"
 }
