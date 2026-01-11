@@ -26,16 +26,28 @@ def load_config():
     try:
         with open(CONFIG_PATH, 'r') as f:
             user_config = json.load(f)
-            # Sirf wahi keys update karo jo valid hain
+            # Validate each key
             for key, value in user_config.items():
-                if key in config:
-                    config[key] = value
-                else:
-                    print(f"⚠️  Ignoring unknown config key: {key}")
+                if key not in config:
+                    print(f"⚠️  Ignoring unknown key: {key}")
+                    continue
+                
+                # Type validation and allowed values
+                if key == "model_type" and value not in ["tiny", "base", "small"]:
+                    print(f"⚠️  Invalid model_type '{value}'. Using default.")
+                    continue
+                    
+                if key == "mic_duration" and (not isinstance(value, int) or value < 1 or value > 60):
+                    print(f"⚠️  mic_duration should be 1-60. Using default.")
+                    continue
+                    
+                if key == "threads" and (not isinstance(value, int) or value < 1 or value > 16):
+                    print(f"⚠️  threads should be 1-16. Using default.")
+                    continue
+                
+                config[key] = value
                     
     except json.JSONDecodeError:
-        print("❌ Error: config.json is invalid JSON. Using defaults.")
-    except Exception as e:
-        print(f"❌ Unexpected config error: {e}. Using defaults.")
+        print("❌ config.json is invalid JSON. Using defaults.")
         
     return config

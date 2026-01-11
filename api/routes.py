@@ -2,6 +2,8 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import os
 import sys
+import subprocess
+import traceback
 
 # Import our existing logic
 # (Path setup taaki root se import ho sake)
@@ -58,9 +60,20 @@ async def speech_to_text(file: UploadFile = File(...), lang: str = "auto"):
             "text": transcribed_text
         }
 
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
+
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=f"Permission denied: {str(e)}")
+
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Whisper engine failed: {e.stderr}")
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
+        # Log full traceback for debugging
+        print(f"❌ Unexpected error:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
     finally:
         # Cleanup upload
         if os.path.exists(temp_path):

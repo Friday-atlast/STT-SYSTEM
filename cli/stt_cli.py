@@ -12,6 +12,7 @@ from audio.mic import record_audio
 from stt.offline import transcribe_audio
 from config.loader import load_config  # <--- Import Loader
 from language.handler import resolve_language
+from audio.preprocess import validate_audio_format, convert_to_wav_16k
 
 def handle_mic(config, cli_lang=None):
     # Resolve final language using handler (CLI > Config)
@@ -33,7 +34,22 @@ def handle_mic(config, cli_lang=None):
         return
 
     print(f"\n🧠 Processing...")
-    transcribe_audio(temp_file, language=final_lang, model_type=model, threads=threads)
+    # Validate recorded file
+    ok, msg = validate_audio_format(temp_file)
+    if not ok:
+        print(f"❌ Audio validation failed: {msg}")
+        if msg.startswith("Unsupported format"):
+            converted = convert_to_wav_16k(temp_file)
+            if converted:
+                temp_to_send = converted
+            else:
+                return
+        else:
+            return
+    else:
+        temp_to_send = temp_file
+
+    transcribe_audio(temp_to_send, language=final_lang, model_type=model, threads=threads)
     
     if os.path.exists(temp_file):
         os.remove(temp_file)
@@ -50,7 +66,23 @@ def handle_file(file_path, config, cli_lang=None):
         print(f"❌ Error: File not found -> {abs_path}")
         return
 
-    transcribe_audio(abs_path, language=final_lang, model_type=model, threads=threads)
+    # Validate input file and convert if needed
+    ok, msg = validate_audio_format(abs_path)
+    if not ok:
+        print(f"❌ Audio validation failed: {msg}")
+        return
+
+    ext = os.path.splitext(abs_path)[1].lower()
+    converted_path = None
+    if ext != '.wav':
+        converted_path = convert_to_wav_16k(abs_path)
+
+    try:
+        to_transcribe = converted_path if converted_path else abs_path
+        transcribe_audio(to_transcribe, language=final_lang, model_type=model, threads=threads)
+    finally:
+        if converted_path and os.path.exists(converted_path):
+            os.remove(converted_path)
 
 def main():
     # 1. Load Config

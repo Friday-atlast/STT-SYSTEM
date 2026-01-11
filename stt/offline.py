@@ -5,6 +5,7 @@ import shutil # File move karne ke liye
 import json
 import multiprocessing
 import time
+import platform
 
 # Add path to find language module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -48,10 +49,13 @@ def get_optimal_threads(config_threads):
 # --- CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-if os.name == 'nt':
-    WHISPER_PATH = os.path.join(BASE_DIR, "engine", "whisper.cpp", "build", "bin", "Release", "whisper-cli.exe")
-else:
-    WHISPER_PATH = os.path.join(BASE_DIR, "engine", "whisper.cpp", "build", "bin", "whisper-cli")
+def get_whisper_binary():
+    if platform.system() == "Windows":
+        return os.path.join(BASE_DIR, "engine", "whisper.cpp", "build", "bin", "Release", "whisper-cli.exe")
+    else:  # Linux/Mac/Pi
+        return os.path.join(BASE_DIR, "engine", "whisper.cpp", "build", "bin", "whisper-cli")
+
+WHISPER_PATH = get_whisper_binary()
 
 OUTPUT_DIR = os.path.join(BASE_DIR, "output", "transcripts")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -138,7 +142,17 @@ def transcribe_audio(audio_path, language="auto", model_type="tiny", threads=4):
         return txt_path
 
     except subprocess.CalledProcessError as e:
+        # Print stdout/stderr to help debugging failing Whisper subprocess
         print(f"\n❌ Failed! Code: {e.returncode}")
+        try:
+            if hasattr(e, 'stdout') and e.stdout:
+                print("--- Whisper STDOUT ---")
+                print(e.stdout)
+            if hasattr(e, 'stderr') and e.stderr:
+                print("--- Whisper STDERR ---")
+                print(e.stderr)
+        except Exception:
+            pass
         return None
     except Exception as e:
         print(f"\n❌ Error: {e}")
